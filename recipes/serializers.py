@@ -45,6 +45,11 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ['name', 'description']
         
 class InventorySerializer(serializers.ModelSerializer):
+    def validate_quantity(self, value):
+        if value < 0:
+            raise serializers.ValidationError('Quantity cannot be negative')
+        return value
+    
     class Meta:
         model = Inventory
         fields = ['user', 'ingredient', 'quantity', 'unit']

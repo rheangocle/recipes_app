@@ -14,6 +14,7 @@ class UserProfile(models.Model):
     def __str__(self):
         return str(self.user.username)
     
+    
 class Inventory(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)

@@ -29,12 +29,14 @@ class Category(BaseModel):
     class Meta:
         verbose_name_plural = "Categories"
     
+    
 class Unit(BaseModel):
     name = models.CharField(max_length=50, unique=True)
     unit_type = models.CharField(max_length=50, choices=[('weight', 'Weight'), ('volume', 'Volume'), ('count', 'Count')])    
 
     def __str__(self):
         return str(self.name)
+    
     
 class Ingredient(BaseModel):
     name = models.CharField(max_length=255, unique=True)
@@ -53,6 +55,7 @@ class RecipeIngredient(BaseModel):
     
     def __str__(self):
         return f"{self.ingredient.name} in {self.recipe.title}: {self.quantity} {self.unit.name if self.unit else ''}" 
+
 
 class Tag(BaseModel):
     name = models.CharField(max_length=255, unique=True)

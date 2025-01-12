@@ -8,7 +8,8 @@ from .views import (
     FeedbackViewSet,
     InventoryViewSet,
     CategoryViewSet,
-    UserProfileViewSet
+    UserProfileViewSet,
+    GenerateRecipeView
 )
 
 router = DefaultRouter()
@@ -20,7 +21,11 @@ router.register(r'inventory', InventoryViewSet, basename='inventory')
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'user-profile', UserProfileViewSet, basename='user-profile')
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('generate-recipe/', GenerateRecipeView.as_view(), name='generate-recipe')
+]
+
+urlpatterns += router.urls
 
 # urlpatterns += [
 #     path('api/token', TokenObtainPairView.as_view(), name='token_obtain_pair'),

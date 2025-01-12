@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import (
+from recipes.views.viewsets import (
     RecipeViewSet,
     IngredientViewSet,
     TagViewSet,
@@ -9,8 +9,9 @@ from .views import (
     InventoryViewSet,
     CategoryViewSet,
     UserProfileViewSet,
-    GenerateRecipeView
 )
+from recipes.views.generate_recipe_view import GenerateRecipeView
+
 
 router = DefaultRouter()
 router.register(r'ingredients', IngredientViewSet, basename='ingredient')
@@ -22,10 +23,10 @@ router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'user-profile', UserProfileViewSet, basename='user-profile')
 
 urlpatterns = [
+    path('', include(router.urls)),
     path('generate-recipe/', GenerateRecipeView.as_view(), name='generate-recipe')
 ]
 
-urlpatterns += router.urls
 
 # urlpatterns += [
 #     path('api/token', TokenObtainPairView.as_view(), name='token_obtain_pair'),

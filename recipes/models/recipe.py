@@ -13,8 +13,8 @@ class Recipe(BaseModel):
     cook_time = models.IntegerField()
     total_time = models.IntegerField()
 
-    ingredients = models.JSONField(default=dict)
-    # ingredients = models.ManyToManyField("Ingredient", through="RecipeIngredient")
+    # ingredients = models.JSONField(default=dict)
+    ingredients = models.ManyToManyField("Ingredient", through="RecipeIngredient")
     tags = models.ManyToManyField("Tag", blank=True)
 
     def __str__(self):
@@ -55,6 +55,16 @@ class Ingredient(BaseModel):
     def __str__(self):
         return str(self.name)
 
+class RecipeIngredient(BaseModel):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    quantity = models.CharField(max_length=50)
+    unit = models.ForeignKey(
+        Unit, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    
+    def __str__(self):
+        return f"{self.quantity} {self.ingredient.name} in {self.recipe.title}"
 
 class Tag(BaseModel):
     name = models.CharField(max_length=255, unique=True)

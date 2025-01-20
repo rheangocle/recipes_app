@@ -7,7 +7,7 @@ import re
 from recipes.models import Recipe, Ingredient, RecipeIngredient
 
 
-class GenerateRecipeView(APIView):
+class UpdateRecipeView(APIView):
     api_url = "http://localhost:11434/api/generate"
     model = "llama3.2:1b"
 
@@ -30,47 +30,73 @@ class GenerateRecipeView(APIView):
             recipe_data["ingredients"] = []
 
         return recipe_data
-    
-    def save_recipe(self, recipe_data):
+
+    def save_recipe(self, recipe_data, recipe):
         """Save recipe to database. Returns saved Recipe object."""
-        
+
         ingredients = recipe_data.pop("ingredients", [])
-        recipe, created = Recipe.objects.update_or_create(
-            title = recipe_data["title"],
-            defaults=recipe_data
-        )
-        
+
+        recipe.title = recipe_data.get("title", recipe.title)
+        recipe.description = recipe_data.get("description", recipe.description)
+        recipe.instructions = recipe_data.get("instructions", recipe.instructions)
+        recipe.cuisine = recipe_data.get("cuisine", recipe.cuisine)
+        recipe.prep_time = recipe_data.get("prep_time", recipe.prep_time)
+        recipe.cook_time = recipe_data.get("cook_time", recipe.cook_time)
+        recipe.total_time = recipe_data.get("total_time", recipe.total_time)
+        recipe.save()
+
         recipe.ingredients.clear()
-        
+
         for detail in ingredients:
             name = detail.get("name").strip()
-            quantity = detail.get("quantity","").strip()
+            quantity = detail.get("quantity", "").strip()
             unit = detail.get("unit", "").strip()
-            
+
             if name:
                 ingredient, _ = Ingredient.objects.get_or_create(name=name)
-                
+
                 RecipeIngredient.objects.create(
-                    recipe=recipe,
-                    ingredient=ingredient,
-                    quantity=quantity,
-                    unit=unit
+                    recipe=recipe, ingredient=ingredient, quantity=quantity, unit=unit
                 )
         return recipe
 
     def post(self, request):
         try:
-            ingredients = request.data.get("ingredients", [])
+            recipe_id = request.data.get("recipe_id")
+            updated_ingredients = request.data.get("ingredients", [])
             preferences = request.data.get("preferences", "")
             dietary_restrictions = request.data.get("dietary_restrictions", "")
             cuisine = request.data.get("cuisine", "")
             save_recipe = request.data.get("save", False)
 
+            if not recipe_id:
+                return Response(
+                    {"error": "recipe id is required for updating a recipe"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                recipe = Recipe.objects.get(id=recipe_id)
+            except Recipe.DoesNotExist:
+                return Response(
+                    {"error": "Recipe not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+
             # Build prompt
             prompt = (
-                f"Generate a recipe using these ingredients: {', '.join(ingredients)}. "
-                f"Preferences: {preferences}. Cuisine: {cuisine}. "
-                f"Dietary restrictions: {dietary_restrictions}. "
+                f"Refine this recipe using the following information:\n"
+                f"Updated Ingredients: {', '.join(updated_ingredients)}.\n"
+                f"Preferences: {preferences}.\n"
+                f"Cuisine: {cuisine}.\n"
+                f"Dietary Restrictions: {dietary_restrictions}.\n"
+                f"Original Recipe:\n"
+                f"Title: {recipe.title}\n"
+                f"Description: {recipe.description}\n"
+                f"Instructions: {recipe.instructions}\n"
+                f"Prep Time: {recipe.prep_time}\n"
+                f"Cook Time: {recipe.cook_time}\n"
+                f"Total Time: {recipe.total_time}\n"
+                f"Ingredients: {', '.join([str(ing.name) for ing in recipe.ingredients.all()])}\n"
                 "Return a JSON object with these exact fields:\n"
                 "{\n"
                 '  "title": string,\n'
@@ -97,12 +123,13 @@ class GenerateRecipeView(APIView):
             recipe_data = self.clean_recipe_data(recipe_data)
 
             if save_recipe:
-                saved_recipe = self.save_recipe(recipe_data)
+                saved_recipe = self.save_recipe(recipe_data, recipe)
                 return Response(
                     {
-                        "mmessage": "Recipe saved successfully",
-                        "recipe_id": saved_recipe.id
-                    }, status=status.HTTP_200_OK
+                        "mmessage": "Recipe updated successfully",
+                        "recipe_id": saved_recipe.id,
+                    },
+                    status=status.HTTP_200_OK,
                 )
 
             return Response(recipe_data, status=status.HTTP_200_OK)

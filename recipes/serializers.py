@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import (
     Recipe,
@@ -7,8 +8,24 @@ from .models import (
     Tag,
     Inventory,
     UserProfile,
+    RecipeIngredient
 )
 
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    
+    class Meta:
+        model = User 
+        fields = ['id', 'username', 'email', 'password']
+        
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password']
+        )
+        UserProfile.objects.create(user=user)
+        return user
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,7 +67,13 @@ class RecipeSerializer(serializers.ModelSerializer):
                     
         return value
 
+class RecipeIngredientSerializer(serializers.ModelSerializer):
+    ingredient = IngredientSerializer()
 
+    class Meta:
+        model = RecipeIngredient
+        fields = ["ingredient", "quantity", "unit"]
+        
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category

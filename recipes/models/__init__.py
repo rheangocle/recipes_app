@@ -1,3 +1,3 @@
 from .base import BaseModel
-from .recipe import Recipe, Ingredient, Category, Unit, Tag
+from .recipe import Recipe, Ingredient, Category, Unit, Tag, RecipeIngredient
 from .user import UserProfile, Inventory, Feedback

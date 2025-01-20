@@ -1,11 +1,13 @@
 # pylint: disable=no-member
 
 from logging import config
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.decorators import action
+from django.contrib.auth.models import User
 from django_filters.rest_framework import DjangoFilterBackend
 from recipes.models import (
     Recipe,
@@ -24,6 +26,7 @@ from recipes.serializers import (
     FeedbackSerializer,
     CategorySerializer,
     UserProfileSerializer,
+    RegisterSerializer
 )
 
 from decouple import config
@@ -31,6 +34,10 @@ from openai import OpenAI
 import requests
 
 
+class RegisterViewSet(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+    
 class BaseViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -46,6 +53,13 @@ class IngredientViewSet(BaseViewSet):
 
     ordering_fields = ["name", "category__name"]
     ordering = ["name"]
+    
+    @action(detail=False, methods=['post'])
+    def auto_complete(self, request):
+        search_term = request.data.get("search_term", "")
+        results = self.queryset.filter(name__icontains=search_term)[:10]
+        serializer = self.get_serializer(results, many=True)
+        return Response(serializer.data)
 
 
 class RecipeViewSet(BaseViewSet):

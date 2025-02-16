@@ -8,6 +8,7 @@ from .views.viewsets import (
     InventoryViewSet,
     CategoryViewSet,
     UserProfileViewSet,
+    RegisterViewSet,
 )
 from .views.generate_recipe_view import GenerateRecipeView
 
@@ -24,6 +25,7 @@ router.register(r"user-profile", UserProfileViewSet, basename="user-profile")
 urlpatterns = [
     path("", include(router.urls)),
     path("generate-recipe/", GenerateRecipeView.as_view(), name="generate-recipe"),
+    path("register/", RegisterViewSet.as_view(), name="register"),
 ]
 
 

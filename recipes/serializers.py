@@ -8,24 +8,25 @@ from .models import (
     Tag,
     Inventory,
     UserProfile,
-    RecipeIngredient
+    RecipeIngredient,
 )
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    
+
     class Meta:
-        model = User 
-        fields = ['id', 'username', 'email', 'password']
-        
+        model = User
+        fields = ["id", "username", "email", "password"]
+
     def create(self, validated_data):
         user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password']
+            username=validated_data["username"],
+            email=validated_data["email"],
+            password=validated_data["password"],
         )
-        UserProfile.objects.create(user=user)
         return user
+
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,22 +51,25 @@ class RecipeSerializer(serializers.ModelSerializer):
             "cuisine",
             "tags",
         ]
-        
+
     def validate_ingredients(self, value):
         """Validate ingredients structure"""
         if not isinstance(value, list):
             raise serializers.ValidationError("Ingredients must be a list")
-                
+
         for item in value:
             if not isinstance(item, dict):
                 raise serializers.ValidationError("Each ingredient must be an object")
-                    
-            required_fields = ['name', 'quantity', 'unit']
+
+            required_fields = ["name", "quantity", "unit"]
             for field in required_fields:
                 if field not in item:
-                    raise serializers.ValidationError(f"Each ingredient must have a '{field}' field")
-                    
+                    raise serializers.ValidationError(
+                        f"Each ingredient must have a '{field}' field"
+                    )
+
         return value
+
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     ingredient = IngredientSerializer()
@@ -73,7 +77,8 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecipeIngredient
         fields = ["ingredient", "quantity", "unit"]
-        
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category

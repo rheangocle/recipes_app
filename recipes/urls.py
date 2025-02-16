@@ -8,10 +8,12 @@ from .views.viewsets import (
     InventoryViewSet,
     CategoryViewSet,
     UserProfileViewSet,
-    RegisterViewSet,
 )
 from .views.generate_recipe_view import GenerateRecipeView
-
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 router = DefaultRouter()
 router.register(r"ingredients", IngredientViewSet, basename="ingredient")
@@ -25,11 +27,4 @@ router.register(r"user-profile", UserProfileViewSet, basename="user-profile")
 urlpatterns = [
     path("", include(router.urls)),
     path("generate-recipe/", GenerateRecipeView.as_view(), name="generate-recipe"),
-    path("register/", RegisterViewSet.as_view(), name="register"),
 ]
-
-
-# urlpatterns += [
-#     path('api/token', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-#     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
-# ]

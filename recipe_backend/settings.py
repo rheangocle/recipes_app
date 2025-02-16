@@ -38,11 +38,18 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "recipes",
     "django_extensions",
     "django_filters",
-    "rest_framework",
     "corsheaders",
+    "dj_rest_auth",
+    "dj_rest_auth.registration",
+    "rest_framework_simplejwt.token_blacklist",
 ]
 
 MIDDLEWARE = [
@@ -54,6 +61,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware"
 ]
 
 ROOT_URLCONF = "recipe_backend.urls"
@@ -143,8 +151,28 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "http://127.0.0.1:3000",
-#     # add other domains as needed
-# ]
+
+SITE_ID = 1
+
+SOCIAL_ACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": config("GOOGLE_OAUTH_CLIENT_ID"),
+            "secret": config("GOOGLE_OAUTH_CLIENT_SECRET"),
+            "key": "",
+        }
+    }
+}
+
+
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_COOKIE': 'my-app-auth',
+    'JWT_AUTH_REFRESH_COOKIE': 'my-refresh-token',
+    'USE_TOKEN': False,
+    'TOKEN_MODEL': None
+}
+
+# Email verification disabled during development
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_EMAIL_REQUIRED = True

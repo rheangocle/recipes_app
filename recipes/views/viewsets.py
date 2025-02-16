@@ -1,7 +1,7 @@
 # pylint: disable=no-member
 
 from logging import config
-from rest_framework import viewsets, permissions, status, generics
+from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -26,17 +26,12 @@ from recipes.serializers import (
     FeedbackSerializer,
     CategorySerializer,
     UserProfileSerializer,
-    RegisterSerializer
 )
 
 from decouple import config
 from openai import OpenAI
 import requests
 
-
-class RegisterViewSet(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer
     
 class BaseViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination

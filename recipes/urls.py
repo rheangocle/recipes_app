@@ -10,10 +10,6 @@ from .views.viewsets import (
     UserProfileViewSet,
 )
 from .views.generate_recipe_view import GenerateRecipeView
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
 
 router = DefaultRouter()
 router.register(r"ingredients", IngredientViewSet, basename="ingredient")

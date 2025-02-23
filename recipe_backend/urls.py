@@ -17,6 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from recipes.views.viewsets import GoogleLogin
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -29,5 +30,10 @@ urlpatterns = [
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("auth/", include("dj_rest_auth.urls")),
     path("auth/registration/", include("dj_rest_auth.registration.urls")),
-    path("auth/", include("allauth.urls")),
+    path(
+        "auth/google/login/callback/",
+        GoogleLogin.as_view(),
+        name="google_login_callback",
+    ),
+    path("accounts/", include("allauth.urls")),
 ]

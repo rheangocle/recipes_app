@@ -27,11 +27,12 @@ from recipes.serializers import (
     CategorySerializer,
     UserProfileSerializer,
 )
+from dj_rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 
-from decouple import config
-from openai import OpenAI
-import requests
-
+    
+class GoogleLogin(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
     
 class BaseViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination

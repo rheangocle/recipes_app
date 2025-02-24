@@ -8,6 +8,9 @@ from .models import (
     Tag,
     Unit,
     Category,
+    DietaryRestriction,
+    DietType,
+    FoodPreference,
 )
 
 admin.site.register(Recipe)
@@ -18,3 +21,6 @@ admin.site.register(Feedback)
 admin.site.register(Tag)
 admin.site.register(Category)
 admin.site.register(Unit)
+admin.site.register(DietaryRestriction)
+admin.site.register(DietType)
+admin.site.register(FoodPreference)

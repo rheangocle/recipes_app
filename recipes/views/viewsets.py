@@ -1,7 +1,7 @@
 # pylint: disable=no-member
 
 from logging import config
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -17,6 +17,9 @@ from recipes.models import (
     Feedback,
     Category,
     UserProfile,
+    DietaryRestriction,
+    DietType,
+    FoodPreference,
 )
 from recipes.serializers import (
     RecipeSerializer,
@@ -26,14 +29,18 @@ from recipes.serializers import (
     FeedbackSerializer,
     CategorySerializer,
     UserProfileSerializer,
+    DietaryRestrictionSerializer,
+    DietTypeSerializer,
+    FoodPreferenceSerializer,
 )
 from dj_rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 
-    
+
 class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
-    
+
+
 class BaseViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -49,8 +56,8 @@ class IngredientViewSet(BaseViewSet):
 
     ordering_fields = ["name", "category__name"]
     ordering = ["name"]
-    
-    @action(detail=False, methods=['post'])
+
+    @action(detail=False, methods=["post"])
     def auto_complete(self, request):
         search_term = request.data.get("search_term", "")
         results = self.queryset.filter(name__icontains=search_term)[:10]
@@ -130,7 +137,7 @@ class UserProfileViewSet(BaseViewSet):
 
     filterset_fields = ["diet_type"]
 
-    search_fields = ["dietary_restrictions", "preferences"]
+    search_fields = ["dietary_restrictions__name", "preferences__name"]
 
     ordering_fields = ["created_at"]
     ordering = ["-created_at"]
@@ -140,3 +147,21 @@ class UserProfileViewSet(BaseViewSet):
 
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class DietTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DietType.objects.all()
+    serializer_class = DietTypeSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class DietaryRestrictionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DietaryRestriction.objects.all()
+    serializer_class = DietaryRestrictionSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class FoodPreferenceViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = FoodPreference.objects.all()
+    serializer_class = FoodPreferenceSerializer
+    permission_classes = [permissions.AllowAny]

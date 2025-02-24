@@ -1,3 +1,5 @@
+# pylint: disable=no-member
+
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import (
@@ -9,6 +11,9 @@ from .models import (
     Inventory,
     UserProfile,
     RecipeIngredient,
+    DietType,
+    DietaryRestriction,
+    FoodPreference,
 )
 
 
@@ -86,6 +91,16 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    diet_type = serializers.PrimaryKeyRelatedField(
+        queryset=DietType.objects.all(), many=True, required=False
+    )
+    dietary_restrictions = serializers.PrimaryKeyRelatedField(
+        queryset=DietaryRestriction.objects.all(), many=True, required=False
+    )
+    preferences = serializers.PrimaryKeyRelatedField(
+        queryset=FoodPreference.objects.all(), many=True, required=False
+    )
+
     class Meta:
         model = UserProfile
         fields = ["id", "user", "diet_type", "dietary_restrictions", "preferences"]
@@ -115,3 +130,21 @@ class InventorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Inventory
         fields = ["user", "ingredient", "quantity", "unit"]
+
+
+class DietTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DietType
+        fields = ["id", "name"]
+
+
+class DietaryRestrictionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DietaryRestriction
+        fields = ["id", "name"]
+
+
+class FoodPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FoodPreference
+        fields = ["id", "name"]

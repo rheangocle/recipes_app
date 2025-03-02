@@ -14,6 +14,10 @@ from .models import (
     DietType,
     DietaryRestriction,
     FoodPreference,
+    FodmapCategory,
+    RecipePreference,
+    FoodPreference,
+    Unit,
 )
 
 
@@ -31,6 +35,18 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data["password"],
         )
         return user
+
+
+class FodmapCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FodmapCategory
+        fields = ["id", "name", "description"]
+
+
+class UnitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Unit
+        fields = ["id", "name", "unit_type"]
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -87,7 +103,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = "__all__"
+        fields = ["id", "name", "description"]
 
 
 class UserProfileSerializer(serializers.ModelSerializer):

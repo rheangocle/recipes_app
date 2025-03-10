@@ -11,6 +11,8 @@ from .models import (
     DietaryRestriction,
     DietType,
     FoodPreference,
+    RecipePreference,
+    FodmapCategory
 )
 
 admin.site.register(Recipe)
@@ -24,3 +26,5 @@ admin.site.register(Unit)
 admin.site.register(DietaryRestriction)
 admin.site.register(DietType)
 admin.site.register(FoodPreference)
+admin.site.register(RecipePreference)
+admin.site.register(FodmapCategory)

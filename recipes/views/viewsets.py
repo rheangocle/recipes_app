@@ -20,6 +20,10 @@ from recipes.models import (
     DietaryRestriction,
     DietType,
     FoodPreference,
+    RecipePreference,
+    FodmapCategory,
+    Unit,
+    RecipeIngredient,
 )
 from recipes.serializers import (
     RecipeSerializer,
@@ -32,6 +36,10 @@ from recipes.serializers import (
     DietaryRestrictionSerializer,
     DietTypeSerializer,
     FoodPreferenceSerializer,
+    RecipePreferenceSerializer,
+    FodmapCategorySerializer,
+    UnitSerializer,
+    RecipeIngredientSerializer,
 )
 from dj_rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
@@ -50,7 +58,7 @@ class IngredientViewSet(BaseViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
 
-    filterset_fields = ["category__id"]
+    filterset_fields = ["category__id", "fodmap_category__id"]
 
     search_fields = ["name"]
 
@@ -69,12 +77,34 @@ class RecipeViewSet(BaseViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
 
-    filterset_fields = ["tags", "cuisine"]
+    filterset_fields = ["tags", "cuisine", "fodmap_friendly"]
 
-    search_fields = ["title"]
+    search_fields = ["title", "description"]
 
     ordering_fields = ["created_at", "title", "total_time"]
     ordering = ["-created_at"]
+
+    @action(detail=False, methods=["get"])
+    def fodmap_friendly(self, request):
+        """Get only FODMAP friendly recipes"""
+        recipes = self.queryset.filter(fodmap_friendly=True)
+        page = self.paginate_queryset(recipes)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(recipes, many=True)
+        return Response(serializer.data)
+
+
+class RecipeIngredientViewSet(BaseViewSet):
+    queryset = RecipeIngredient.objects.all()
+    serializer_class = RecipeIngredientSerializer
+
+    filterset_fields = ["recipe__id", "ingredient__id"]
+    search_fields = ["ingredient__name", "recipe__title"]
+    ordering_fields = ["recipe__title", "ingredient__name"]
+    ordering = ["recipe__title"]
 
 
 class TagViewSet(BaseViewSet):
@@ -101,26 +131,53 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ["name"]
 
 
+class UnitViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = UnitSerializer
+    queryset = Unit.objects.all()
+
+    filterset_fields = ["unit_type"]
+
+    search_fields = ["name"]
+
+    ordering_fields = ["name"]
+    ordering = ["name"]
+
+
+class FodmapCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = FodmapCategorySerializer
+    queryset = FodmapCategory.objects.all()
+
+    filterset_fields = ["name"]
+
+    search_fields = ["name"]
+
+    ordering_fields = ["name"]
+    ordering = ["name"]
+
+
 class InventoryViewSet(BaseViewSet):
     serializer_class = InventorySerializer
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
-    filterset_fields = ["ingredient__name", "quantity"]
+    filterset_fields = ["ingredient__name", "quantity", "expiry_date"]
 
     search_fields = ["ingredient__name"]
 
-    ordering_fields = ["quantity", "ingredient__name"]
+    ordering_fields = ["quantity", "ingredient__name", "expiry_date"]
     ordering = ["ingredient__name"]
 
     def get_queryset(self):
         return Inventory.objects.filter(user=self.request.user)
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 
 class FeedbackViewSet(BaseViewSet):
     serializer_class = FeedbackSerializer
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
-    filterset_fields = ["recipe", "created_at"]
+    filterset_fields = ["recipe", "created_at", "rating"]
 
     search_fields = ["recipe__title", "recipe__cuisine", "comments", "rating"]
 
@@ -130,14 +187,17 @@ class FeedbackViewSet(BaseViewSet):
     def get_queryset(self):
         return Feedback.objects.filter(user=self.request.user)
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 
 class UserProfileViewSet(BaseViewSet):
     serializer_class = UserProfileSerializer
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     filterset_fields = ["diet_type"]
 
-    search_fields = ["dietary_restrictions__name", "preferences__name"]
+    search_fields = ["dietary_restrictions__name"]
 
     ordering_fields = ["created_at"]
     ordering = ["-created_at"]
@@ -145,8 +205,13 @@ class UserProfileViewSet(BaseViewSet):
     def get_queryset(self):
         return UserProfile.objects.filter(user=self.request.user)
 
-    def perform_update(self, serializer):
-        serializer.save(user=self.request.user)
+    def perform_create(self, serializer):
+        try:
+            profile = UserProfile.objects.get(user=self.request.user)
+            serializer.instance = profile
+            serializer.save()
+        except UserProfile.DoesNotExist:
+            serializer.save(user=self.request.user)
 
 
 class DietTypeViewSet(viewsets.ReadOnlyModelViewSet):
@@ -162,6 +227,32 @@ class DietaryRestrictionViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class FoodPreferenceViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = FoodPreference.objects.all()
     serializer_class = FoodPreferenceSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
+
+    filterset_fields = ["ingredient", "preference"]
+    search_fields = ["ingredient__name"]
+    ordering_fields = ["preference", "ingredient__name"]
+    ordering = ["preference"]
+
+    def get_queryset(self):
+        return FoodPreference.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class RecipePreferenceViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = RecipePreferenceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    filterset_fields = ["recipe", "preference"]
+    search_fields = ["recipe__title"]
+    ordering_fields = ["preference", "recipe__title"]
+    ordering = ["preference"]
+
+    def get_queryset(self):
+        return RecipePreference.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

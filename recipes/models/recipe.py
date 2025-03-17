@@ -34,7 +34,7 @@ class Ingredient(BaseModel):
         Unit, on_delete=models.SET_NULL, blank=True, null=True
     )
     fodmap_category = models.ForeignKey('FodmapCategory', on_delete=models.SET_NULL, null=True, blank=True)
-    substitutes = models.ManyToManyField('self', blank=True, symmetrical=False, related_name='substitute for')
+    substitutes = models.ManyToManyField('self', blank=True, symmetrical=False, related_name='substitute_for')
     nutritional_info = models.JSONField(null=True, blank=True)
 
     def __str__(self):

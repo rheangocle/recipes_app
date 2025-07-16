@@ -95,6 +95,40 @@ class RecipeViewSet(BaseViewSet):
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(recipes, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=["get"])
+    def by_ingredients(self, request):
+        """Find recipes by given ingredients"""
+        ingredient_ids = request.query_params.getList('ingredients')
+        if not ingredient_ids:
+            return Response({'error': "No ingredients provided"}, status=400)
+        
+        recipes = Recipe.objects.filter(ingredients__id__in=ingredient_ids).distinct())
+        page = self.paginate_queryset(recipes)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(recipes, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=["get"])
+    def favorites(self, request):
+        """Get user's favorite recipes"""
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, 401)
+        
+        favorite_recipes = Recipe.objects.filter(
+            user_preferences__user=request.user,
+            user_preferences__preference='favorite'
+            )
+        page = self.paginate_queryset(favorite_recipes)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(favorite_recipes, many=True)
+        return Response(serializer.data)
 
 
 class RecipeIngredientViewSet(BaseViewSet):

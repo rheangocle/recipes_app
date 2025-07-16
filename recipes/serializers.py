@@ -92,6 +92,16 @@ class RecipeSerializer(serializers.ModelSerializer):
         source="recipe_ingredients", many=True, read_only=True
     )
     tags = TagSerializer(many=True, read_only=True)
+    tag_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(),
+        source="tags",
+        write_only=True,
+        many=True,
+        required=False,
+    )
+    ingredients_data = serializers.ListField(
+        child=serializers.DictField(), write_only=True, required=False
+    )
 
     class Meta:
         model = Recipe
@@ -100,6 +110,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "ingredients_detail",
+            "ingredients_data",
             "instructions",
             "prep_time",
             "cook_time",
@@ -107,6 +118,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             "servings",
             "cuisine",
             "tags",
+            "tag_ids",
             "fodmap_friendly",
             "fodmap_notes",
             "image",
@@ -114,6 +126,59 @@ class RecipeSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["created_at", "updated_at"]
+
+    def create(self, validated_data):
+        ingredients_data = validated_data.pop("ingredients_data", [])
+        tags = validated_data.pop("tags", [])
+
+        recipe = Recipe.objects.create(**validated_data)
+
+        recipe.tags.set(tags)
+
+        for ingredient_data in ingredients_data:
+            ingredient_name = ingredient_data.get("ingredient_name")
+            quantity = ingredient_data.get("quantity")
+            unit_id = ingredient_data.get("unit_id")
+
+            ingredient, _ = Ingredient.objects.get_or_create(name=ingredient_name)
+            unit = Unit.objects.get(id=unit_id) if unit_id else None
+            RecipeIngredient.objects.create(
+                recipe=recipe,
+                ingredient=ingredient,
+                quantity=quantity,
+                unit=unit,
+                notes=ingredient_data.get("notes", ""),
+            )
+        return recipe
+
+    def update(self, instance, validated_data):
+        ingredients_data = validated_data.pop("ingredients_data", None)
+        tags = validated_data.pop("tags", None)
+
+        for attribute, value in validated_data.items():
+            setattr(instance, attribute, value)
+        instance.save()
+
+        if tags is not None:
+            instance.tags.set(tags)
+
+        if ingredients_data is not None:
+            instance.recipe_ingredients.all().delete()
+            for ingredient_data in ingredients_data:
+                ingredient_name = ingredient_data.get("ingredient_name")
+                quantity = ingredient_data.get("quantity")
+                unit_id = ingredient_data.get("unit_id")
+
+                ingredient, _ = Ingredient.objects.get_or_create(name=ingredient_name)
+                unit = Unit.objects.get(id=unit_id) if unit_id else None
+                RecipeIngredient.objects.create(
+                    recipe=instance,
+                    ingredient=ingredient,
+                    quantity=quantity,
+                    unit=unit,
+                    notes=ingredient_data.get("notes", ""),
+                )
+        return instance
 
     def validate_ingredients(self, value):
         """Validate ingredients structure"""
@@ -235,24 +300,23 @@ class InventorySerializer(serializers.ModelSerializer):
 
 class FoodPreferenceSerializer(serializers.ModelSerializer):
     ingredient = IngredientSerializer(read_only=True)
+    ingredient_id = serializers.PrimaryKeyRelatedField(
+        queryset=Ingredient.objects.all(), source="ingredient", write_only=True
+    )
 
     class Meta:
         model = FoodPreference
-        fields = [
-            "id",
-            "name",
-            "ingredient",
-            "ingredient_id",
-            "quantity",
-            "unit",
-            "unit_id",
-            "expiry_date",
-        ]
+        fields = ["id", "ingredient", "ingredient_id", "preference"]
+        read_only_fields = ["user"]
 
 
 class RecipePreferenceSerializer(serializers.ModelSerializer):
     recipe = RecipeSerializer(read_only=True)
+    recipe_id = serializers.PrimaryKeyRelatedField(
+        queryset=Recipe.objects.all(), source="recipe", write_only=True
+    )
 
     class Meta:
-        model = RecipeSerializer
-        fields = ["id", "user", "recipe", "preference"]
+        model = RecipePreference
+        fields = ["id", "user", "recipe", "recipe_id", "preference"]
+        read_only_fields = ["user"]

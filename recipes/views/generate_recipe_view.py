@@ -56,14 +56,14 @@ class FODMAPRecipeGeneratorView(APIView):
         recipe, created = Recipe.objects.update_or_create(
             title=recipe_data["title"],
             defaults={
-                "descripion": recipe_data.get("description", ""),
+                "description": recipe_data.get("description", ""),
                 "instructions": recipe_data.get("instructions", ""),
                 "cuisine": recipe_data.get("cuisine", ""),
                 "prep_time": recipe_data.get("prep_time", 0),
                 "cook_time": recipe_data.get("cook_time", 0),
                 "total_time": recipe_data.get("total_time", 0),
                 "servings": recipe_data.get("servings", 2),
-                "fodmap_friendly": recipe_data.get("fodmap_friednly", True),
+                "fodmap_friendly": recipe_data.get("fodmap_friendly", True),
                 "fodmap_notes": recipe_data.get("fodmap_notes", ""),
             },
         )
@@ -229,7 +229,7 @@ class FODMAPRecipeGeneratorView(APIView):
                 saved_recipe = self.save_recipe(recipe_data)
                 return Response(
                     {
-                        "mmessage": "Recipe saved successfully",
+                        "message": "Recipe saved successfully",
                         "recipe_id": saved_recipe.id,
                     },
                     status=status.HTTP_200_OK,

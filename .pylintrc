@@ -1,0 +1,6 @@
+[MASTER]
+load-plugins=pylint_django
+django-settings-module=recipe_backend.settings
+
+[MESSAGES CONTROL]
+disable=C0114, C0115, C0116 

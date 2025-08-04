@@ -29,6 +29,14 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = []
 
 
+if DEBUG:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
+    }
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -182,3 +190,25 @@ REST_AUTH = {
 # Email verification disabled during development
 ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_EMAIL_REQUIRED = True
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PARSER_CLASS': 'redis.connection.HiredisParser',
+            'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
+            'CONNECTION_POOL_CLASS_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True
+            },
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor'
+        }
+    }
+}
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+CACHE_MIDDLEWARE_KEY_PREFIX = 'recipes_app'

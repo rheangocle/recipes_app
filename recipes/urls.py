@@ -43,8 +43,8 @@ router.register(r"units", UnitViewSet)
 
 urlpatterns = [
     path(
-        "recipes/generate", FODMAPRecipeGeneratorView.as_view(), name="generate-recipe"
+        "recipes/generate/", FODMAPRecipeGeneratorView.as_view(), name="generate-recipe"
     ),
-    path("recipes/update", UpdateFODMAPRecipeView.as_view(), name="update-recipe"),
+    path("recipes/update/", UpdateFODMAPRecipeView.as_view(), name="update-recipe"),
     path("", include(router.urls)),
 ]

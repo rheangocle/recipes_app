@@ -2,7 +2,8 @@
 
 from django.db import models
 from .base import BaseModel
-
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class Category(BaseModel):
     name = models.CharField(max_length=255, unique=True)
@@ -61,8 +62,15 @@ class Recipe(BaseModel):
     ingredients = models.ManyToManyField(Ingredient, through="RecipeIngredient")
     tags = models.ManyToManyField("Tag", blank=True)
     image = models.ImageField(upload_to='recipe_images/', null=True, blank=True)
-    fodmap_friendly = models.BooleanField(default=False)
+    fodmap_friendly = models.BooleanField(default=True)
     fodmap_notes = models.TextField(blank=True, help_text='Notes about FODMAP considerations for this recipe')
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_recipes'
+    )
 
     def __str__(self):
         return str(self.title)

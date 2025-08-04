@@ -1,10 +1,14 @@
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 import requests
 import json
 import re
-from recipes.models import (
+import logging
+from django.core.exceptions import ValidationError
+from ..models import (
     Recipe,
     Ingredient,
     RecipeIngredient,
@@ -13,12 +17,58 @@ from recipes.models import (
     FodmapCategory,
     FoodPreference,
 )
+from jsonschema import validate, ValidationError as JSONSchemaValidationError
 
+
+logger = logging.getLogger(__name__)
+
+RECIPE_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "instructions": {"type": "string"},
+        "cuisine": {"type": "string"},
+        "prep_time": {"type": "integer"},
+        "cook_time": {"type": "integer"},
+        "total_time": {"type": "integer"},
+        "servings": {"type": "integer"},
+        "ingredients": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "quantity": {"type": "string"},
+                    "unit": {"type": "string"}
+                },
+                "required": ["name", "quantity", "unit"]
+            }
+        },
+        "fodmap_friendly": {"type": "boolean"},
+        "fodmap_notes": {"type": "string"}
+    },
+    "required": ["title", "instructions", "ingredients"]
+}
 
 class FODMAPRecipeGeneratorView(APIView):
     api_url = "http://localhost:11434/api/generate"
-    model = "llama3.2:1b"
-
+    model = "deepseek-coder:1.3b"
+    
+    def validate_ingredients(self, ingredients):
+        """Validate ingredient list"""
+        MAX_NUM_INGREDIENTS = 25
+        if not ingredients:
+            raise ValidationError('At least one ingredient is required')
+        
+        valid_ingredients = list(set([ingredient.strip() for ingredient in ingredients if ingredient.strip()]))
+        if not valid_ingredients:
+            raise ValidationError('Please provide valid ingredient name')
+        
+        if len(valid_ingredients) > MAX_NUM_INGREDIENTS:
+            raise ValidationError('Maximum 25 ingredients allowed')
+        return valid_ingredients
+    
     def extract_json_from_response(self, response_text):
         """Extract JSON from markdown response."""
         match = re.search(r"```(?:json)?\n(.*?)\n```", response_text, re.DOTALL)
@@ -154,7 +204,15 @@ class FODMAPRecipeGeneratorView(APIView):
         except UserProfile.DoesNotExist:
             return "", []
 
+    @method_decorator(ratelimit(key='user', rate='10/h', method='POST'))
     def post(self, request):
+        if getattr(request, 'limited', False):
+            return Response(
+                {
+                    'error': 'Rate limit exceeded. Up to 10 recipes can be generated per hour.'
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
         try:
             ingredients = request.data.get("ingredients", [])
             preferences = request.data.get("preferences", "")
@@ -174,40 +232,22 @@ class FODMAPRecipeGeneratorView(APIView):
                 preferences = f"{preferences}. {user_preferences}"
             # Build prompt
             fodmap_instruction = """
-            You are a FODMAP-specialized chef. Create a low FOMAP recipe that is sage for people with IBS and following the FODMAP diet.
+            You are a FODMAP-specialized chef. Create a low FODMAP recipe safe for IBS.
             Follow these FODMAP rules strictly:
             1. Avoid high FODMAP ingredients like onion, garlic, wheat, high-lactose dairy, and certain fruits/vegetables.
-            2. Use suitable substitutes (e.g., garlic-infused oil instead of garlic, green parts of spring onion intead of onion).
+            2. Use suitable substitutes (e.g., garlic-infused oil instead of garlic, green parts of spring onion instead of onion).
             3. Include specific portion sizes as FODMAP tolerance depends on serving size.
             4. Include FODMAP-specific notes for any ingredients that need special preparation or consideration.
             """
+            
             prompt = (
-                f"{fodmap_instruction}\n\n"
-                f"Generate a recipe using these ingredients: {', '.join(ingredients)}. "
-                f"Preferences: {preferences}. Cuisine: {cuisine}. "
-                f"Dietary restrictions: {dietary_restrictions}. "
-                f"{f'IMPORTANT: Completely avoid these allergens: {", ".join(allergic_ingredients)}.' if allergic_ingredients else ''}\n\n"
-                "Return a JSON object with these exact fields:\n"
-                "{\n"
-                '  "title": string,\n'
-                '  "description": string,\n'
-                '  "instructions": string,\n'
-                '  "cuisine": string,\n'
-                '  "prep_time": integer (minutes),\n'
-                '  "cook_time": integer (minutes),\n'
-                '  "total_time": integer (minutes),\n'
-                '   "servings": integer, \n'
-                '  "ingredients": [\n'
-                "    {\n"
-                '      "name": string,\n'
-                '      "quantity": string,\n'
-                '      "unit": string\n'
-                "    }\n"
-                "  ],\n"
-                '   "fodmap_friendly": boolean \n'
-                '   "fodmap_notes": string\n'
-                "}"
-            )
+            f"{fodmap_instruction}\n\n"
+            f"Ingredients: {', '.join(ingredients)}.\n"
+            f"Preferences: {preferences}.\nCuisine: {cuisine}.\n"
+            f"Dietary restrictions: {dietary_restrictions}.\n"
+            f"{f'Allergens to avoid: {", ".join(allergic_ingredients)}.' if allergic_ingredients else ''}\n\n"
+            "Respond ONLY in valid JSON matching the provided schema exactly."
+        )
 
             response = requests.post(
                 self.api_url,
@@ -220,112 +260,118 @@ class FODMAPRecipeGeneratorView(APIView):
 
             try:
                 recipe_data = json.loads(json_content)
-                recipe_data = self.clean_recipe_data(recipe_data)
-            except:
-                recipe_data = self.extract_recipe_with_regex(llm_response)
-                recipe_data = self.clean_recipe_data(recipe_data)
-                
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON parsing failed: {str(e)} | Raw response: {llm_response}")
+                return Response(
+                    {"error": f"Failed to parse recipe JSON: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            recipe_data = self.clean_recipe_data(recipe_data)
+            
+            try:
+                validate(instance=recipe_data, schema=self.RECIPE_JSON_SCHEMA)
+            except JSONSchemaValidationError as e:
+                logger.error(f"Schema validation error: {e.message}")
+                return Response(
+                    {"error": f"Recipe validation error: {e.message}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             if save_recipe:
                 saved_recipe = self.save_recipe(recipe_data)
                 return Response(
                     {
                         "message": "Recipe saved successfully",
-                        "recipe_id": saved_recipe.id,
+                        "recipe_id": saved_recipe.id
                     },
-                    status=status.HTTP_200_OK,
+                    status=status.HTTP_200_OK
                 )
-
             return Response(recipe_data, status=status.HTTP_200_OK)
-
-        except json.JSONDecodeError as e:
-            print("Raw Response:", llm_response)
-            print("Extracted JSON:", json_content)
-            return Response(
-                {"error": f"Failed to parse recipe: {str(e)}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+                
         except Exception as e:
+            logger.error(f"POST for AI generation failed: {str(e)}")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    def extract_recipe_with_regex(self, text):
-        recipe_data = {
-            "title": "",
-            "description": "",
-            "instructions": "",
-            "cuisine": "",
-            "prep_time": 0,
-            "cook_time":0,
-            "total_time": 0,
-            "servings": 2,
-            "ingredients": [],
-            "fodmap_friendly": True,
-            "fodmap_notes": ""
-        }
-               # Extract title
-        title_match = re.search(r"title[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
-        if title_match:
-            recipe_data["title"] = title_match.group(1)
+    # def extract_recipe_with_regex(self, text):
+    #     recipe_data = {
+    #         "title": "",
+    #         "description": "",
+    #         "instructions": "",
+    #         "cuisine": "",
+    #         "prep_time": 0,
+    #         "cook_time":0,
+    #         "total_time": 0,
+    #         "servings": 2,
+    #         "ingredients": [],
+    #         "fodmap_friendly": True,
+    #         "fodmap_notes": ""
+    #     }
+    #            # Extract title
+    #     title_match = re.search(r"title[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
+    #     if title_match:
+    #         recipe_data["title"] = title_match.group(1)
             
-        # Extract description
-        desc_match = re.search(r"description[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
-        if desc_match:
-            recipe_data["description"] = desc_match.group(1)
+    #     # Extract description
+    #     desc_match = re.search(r"description[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
+    #     if desc_match:
+    #         recipe_data["description"] = desc_match.group(1)
             
-        # Extract instructions
-        instr_match = re.search(r"instructions[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
-        if instr_match:
-            recipe_data["instructions"] = instr_match.group(1)
+    #     # Extract instructions
+    #     instr_match = re.search(r"instructions[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
+    #     if instr_match:
+    #         recipe_data["instructions"] = instr_match.group(1)
             
-        # Extract cuisine
-        cuisine_match = re.search(r"cuisine[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
-        if cuisine_match:
-            recipe_data["cuisine"] = cuisine_match.group(1)
+    #     # Extract cuisine
+    #     cuisine_match = re.search(r"cuisine[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
+    #     if cuisine_match:
+    #         recipe_data["cuisine"] = cuisine_match.group(1)
             
-        # Extract times
-        prep_match = re.search(r"prep_time[\"']?\s*:\s*(\d+)", text, re.IGNORECASE)
-        if prep_match:
-            recipe_data["prep_time"] = int(prep_match.group(1))
+    #     # Extract times
+    #     prep_match = re.search(r"prep_time[\"']?\s*:\s*(\d+)", text, re.IGNORECASE)
+    #     if prep_match:
+    #         recipe_data["prep_time"] = int(prep_match.group(1))
             
-        cook_match = re.search(r"cook_time[\"']?\s*:\s*(\d+)", text, re.IGNORECASE)
-        if cook_match:
-            recipe_data["cook_time"] = int(cook_match.group(1))
+    #     cook_match = re.search(r"cook_time[\"']?\s*:\s*(\d+)", text, re.IGNORECASE)
+    #     if cook_match:
+    #         recipe_data["cook_time"] = int(cook_match.group(1))
             
-        total_match = re.search(r"total_time[\"']?\s*:\s*(\d+)", text, re.IGNORECASE)
-        if total_match:
-            recipe_data["total_time"] = int(total_match.group(1))
+    #     total_match = re.search(r"total_time[\"']?\s*:\s*(\d+)", text, re.IGNORECASE)
+    #     if total_match:
+    #         recipe_data["total_time"] = int(total_match.group(1))
             
-        # Extract servings
-        servings_match = re.search(r"servings[\"']?\s*:\s*(\d+)", text, re.IGNORECASE)
-        if servings_match:
-            recipe_data["servings"] = int(servings_match.group(1))
+    #     # Extract servings
+    #     servings_match = re.search(r"servings[\"']?\s*:\s*(\d+)", text, re.IGNORECASE)
+    #     if servings_match:
+    #         recipe_data["servings"] = int(servings_match.group(1))
             
-        # Extract fodmap notes
-        notes_match = re.search(r"fodmap_notes[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
-        if notes_match:
-            recipe_data["fodmap_notes"] = notes_match.group(1)
+    #     # Extract fodmap notes
+    #     notes_match = re.search(r"fodmap_notes[\"']?\s*:\s*[\"']([^\"']+)[\"']", text, re.IGNORECASE)
+    #     if notes_match:
+    #         recipe_data["fodmap_notes"] = notes_match.group(1)
             
-        # Try to extract ingredients
-        ingredients_section = re.search(r"ingredients[\"']?\s*:\s*\[(.*?)\]", text, re.DOTALL)
-        if ingredients_section:
-            ingredient_items = re.findall(r"\{(.*?)\}", ingredients_section.group(1), re.DOTALL)
-            for item in ingredient_items:
-                ingredient = {}
+    #     # Try to extract ingredients
+    #     ingredients_section = re.search(r"ingredients[\"']?\s*:\s*\[(.*?)\]", text, re.DOTALL)
+    #     if ingredients_section:
+    #         ingredient_items = re.findall(r"\{(.*?)\}", ingredients_section.group(1), re.DOTALL)
+    #         for item in ingredient_items:
+    #             ingredient = {}
                 
-                name_match = re.search(r"name[\"']?\s*:\s*[\"']([^\"']+)[\"']", item)
-                if name_match:
-                    ingredient["name"] = name_match.group(1)
+    #             name_match = re.search(r"name[\"']?\s*:\s*[\"']([^\"']+)[\"']", item)
+    #             if name_match:
+    #                 ingredient["name"] = name_match.group(1)
                     
-                quantity_match = re.search(r"quantity[\"']?\s*:\s*[\"']([^\"']+)[\"']", item)
-                if quantity_match:
-                    ingredient["quantity"] = quantity_match.group(1)
+    #             quantity_match = re.search(r"quantity[\"']?\s*:\s*[\"']([^\"']+)[\"']", item)
+    #             if quantity_match:
+    #                 ingredient["quantity"] = quantity_match.group(1)
                     
-                unit_match = re.search(r"unit[\"']?\s*:\s*[\"']([^\"']+)[\"']", item)
-                if unit_match:
-                    ingredient["unit"] = unit_match.group(1)
+    #             unit_match = re.search(r"unit[\"']?\s*:\s*[\"']([^\"']+)[\"']", item)
+    #             if unit_match:
+    #                 ingredient["unit"] = unit_match.group(1)
                     
-                if ingredient.get("name"):
-                    recipe_data["ingredients"].append(ingredient)
+    #             if ingredient.get("name"):
+    #                 recipe_data["ingredients"].append(ingredient)
         
-        return recipe_data
+    #     return recipe_data

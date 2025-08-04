@@ -4,7 +4,7 @@ from rest_framework import status
 import requests
 import json
 import re
-from recipes.models import (
+from ..models import (
     Recipe, 
     Ingredient, 
     RecipeIngredient, 

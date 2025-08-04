@@ -89,7 +89,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
     ingredients_detail = RecipeIngredientSerializer(
-        source="recipe_ingredients", many=True, read_only=True
+        source="recipeingredient_set", many=True, read_only=True
     )
     tags = TagSerializer(many=True, read_only=True)
     tag_ids = serializers.PrimaryKeyRelatedField(
@@ -102,6 +102,11 @@ class RecipeSerializer(serializers.ModelSerializer):
     ingredients_data = serializers.ListField(
         child=serializers.DictField(), write_only=True, required=False
     )
+    
+    def validate_title(self, value):
+        if len(value) < 1:
+            raise serializers.ValidationError('Title must be at least 1 character long')
+        return value
 
     class Meta:
         model = Recipe

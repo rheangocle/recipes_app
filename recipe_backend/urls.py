@@ -20,6 +20,9 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from recipes.views.viewsets import GoogleLogin
+from recipes.views.auth_views import UserDetailView
+from recipes.views.stats_views import UserStatisticsView
+from recipes.views.shopping_list_views import ShoppingListView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -32,7 +35,11 @@ urlpatterns = [
         name="google_login_callback",
     ),
     path("accounts/", include("allauth.urls")),
+    path("user/details/", UserDetailView.as_view(), name="user-details"),
+    path("user/statistics/", UserStatisticsView.as_view(), name="user-statistics"),
+    path("shopping-list/", ShoppingListView.as_view(), name="shopping-list"),
 ]
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

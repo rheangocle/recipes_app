@@ -193,7 +193,7 @@ GET    /shopping-list/               # Shopping list
 
 ## 📱 Mobile Frontend
 
-The mobile frontend for this application is located at: `https://github.com/rheangocle/recipe-app-react-native`
+The mobile frontend for this application is located here: [React Native Mobile App](https://github.com/rheangocle/recipe-app-react-native)
 
 ---
 

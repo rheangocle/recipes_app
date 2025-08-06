@@ -195,10 +195,6 @@ GET    /shopping-list/               # Shopping list
 
 The mobile frontend for this application is located at: `https://github.com/rheangocle/recipe-app-react-native`
 
-```
-/mnt/c/Users/rhean/Documents/recipe-app
-```
-
 ---
 
 **Note**: This application is designed specifically for users with IBS and digestive sensitivities. Always consult with healthcare professionals regarding dietary changes.

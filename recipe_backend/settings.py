@@ -185,11 +185,15 @@ REST_AUTH = {
     "JWT_AUTH_REFRESH_COOKIE": "my-refresh-token",
     "USE_TOKEN": False,
     "TOKEN_MODEL": None,
+    "REGISTER_SERIALIZER": "recipes.serializers.RegisterSerializer",
 }
 
 # Email verification disabled during development
 ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_UNIQUE_EMAIL = True
 
 CACHES = {
     'default': {
@@ -197,7 +201,6 @@ CACHES = {
         'LOCATION': 'redis://127.0.0.1:6379/1',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PARSER_CLASS': 'redis.connection.HiredisParser',
             'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
             'CONNECTION_POOL_CLASS_KWARGS': {
                 'max_connections': 50,

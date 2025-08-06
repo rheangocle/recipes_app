@@ -30,6 +30,7 @@ router.register(r"feedback", FeedbackViewSet, basename="feedback")
 router.register(r"inventory", InventoryViewSet, basename="inventory")
 router.register(r"categories", CategoryViewSet, basename="category")
 router.register(r"user-profile", UserProfileViewSet, basename="user-profile")
+router.register(r"profile", UserProfileViewSet, basename="profile")  # Alias for mobile frontend
 router.register(r"diet-types", DietTypeViewSet, basename="diettype")
 router.register(
     r"dietary-restrictions", DietaryRestrictionViewSet, basename="dietaryrestriction"

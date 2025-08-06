@@ -21,18 +21,28 @@ from .models import (
 )
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+class RegisterSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True)
 
-    class Meta:
-        model = User
-        fields = ["id", "username", "email", "password"]
-
-    def create(self, validated_data):
+    def save(self, request=None):
+        email = self.validated_data["email"]
+        password = self.validated_data["password"]
+        
+        # Generate username from email (before @ symbol)
+        base_username = email.split('@')[0]
+        
+        # Ensure username is unique
+        counter = 1
+        username = base_username
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+        
         user = User.objects.create_user(
-            username=validated_data["username"],
-            email=validated_data["email"],
-            password=validated_data["password"],
+            username=username,
+            email=email,
+            password=password,
         )
         return user
 
@@ -241,7 +251,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "id",
             "user",
             "diet_type",
-            "diet_type_ids",
+            "diet_type_id",
             "dietary_restrictions",
             "dietary_restriction_ids",
             "food_preferences",

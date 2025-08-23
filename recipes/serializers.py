@@ -21,6 +21,31 @@ from .models import (
 )
 
 
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        if email and password:
+            # Try to find user by email
+            try:
+                user = User.objects.get(email=email)
+                if user.check_password(password):
+                    attrs['user'] = user
+                    return attrs
+                else:
+                    raise serializers.ValidationError('Incorrect password.')
+            except User.DoesNotExist:
+                raise serializers.ValidationError('No user found with this email address.')
+        else:
+            raise serializers.ValidationError('Must include "email" and "password".')
+
+        return attrs
+
+
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True)
@@ -227,13 +252,13 @@ class DietaryRestrictionSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    diet_type = DietTypeSerializer(read_only=True)
-    diet_type_id = serializers.PrimaryKeyRelatedField(
+    diet_types = DietTypeSerializer(many=True, read_only=True)
+    diet_type_ids = serializers.PrimaryKeyRelatedField(
         queryset=DietType.objects.all(),
-        source="diet_type",
+        source="diet_types",
         write_only=True,
+        many=True,
         required=False,
-        allow_null=True,
     )
     dietary_restrictions = DietaryRestrictionSerializer(many=True, read_only=True)
     dietary_restriction_ids = serializers.PrimaryKeyRelatedField(
@@ -250,8 +275,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user",
-            "diet_type",
-            "diet_type_id",
+            "diet_types",
+            "diet_type_ids",
             "dietary_restrictions",
             "dietary_restriction_ids",
             "food_preferences",

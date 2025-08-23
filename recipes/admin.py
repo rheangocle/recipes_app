@@ -128,15 +128,15 @@ class RecipePreferenceAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'diet_type', 'created_at', 'updated_at']
-    list_filter = ['diet_type', 'dietary_restrictions']
+    list_display = ['user', 'diet_types_display', 'created_at', 'updated_at']
+    list_filter = ['diet_types', 'dietary_restrictions']
     search_fields = ['user__username', 'user__email']
-    autocomplete_fields = ['user', 'diet_type']
-    filter_horizontal = ['dietary_restrictions', 'preferences']
+    autocomplete_fields = ['user']
+    filter_horizontal = ['diet_types', 'dietary_restrictions', 'preferences']
     readonly_fields = ['created_at', 'updated_at']
     fieldsets = (
         (None, {
-            'fields': ('user', 'diet_type')
+            'fields': ('user', 'diet_types')
         }),
         ('Restrictions and Preferences', {
             'fields': ('dietary_restrictions', 'preferences')
@@ -146,6 +146,10 @@ class UserProfileAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def diet_types_display(self, obj):
+        return ", ".join([dt.name for dt in obj.diet_types.all()])
+    diet_types_display.short_description = 'Diet Types'
 
 @admin.register(RecipeIngredient)
 class RecipeIngredientAdmin(admin.ModelAdmin):

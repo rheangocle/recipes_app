@@ -102,7 +102,7 @@ class RecipePreference(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    diet_type = models.ForeignKey(DietType, on_delete=models.CASCADE, null=True, blank=True)
+    diet_types = models.ManyToManyField(DietType, blank=True, related_name='user_profiles')
     dietary_restrictions = models.ManyToManyField(DietaryRestriction, blank=True)
     preferences = models.ManyToManyField(FoodPreference, blank=True, related_name='user_profiles')
     created_at = models.DateTimeField(auto_now_add=True)

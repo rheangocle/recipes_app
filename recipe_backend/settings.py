@@ -186,13 +186,14 @@ REST_AUTH = {
     "USE_TOKEN": False,
     "TOKEN_MODEL": None,
     "REGISTER_SERIALIZER": "recipes.serializers.RegisterSerializer",
+    "LOGIN_SERIALIZER": "recipes.serializers.LoginSerializer",
 }
 
 # Email verification disabled during development
 ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_UNIQUE_EMAIL = True
 
 CACHES = {

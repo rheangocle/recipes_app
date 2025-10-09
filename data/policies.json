@@ -1,0 +1,40 @@
+{
+    "tags": [
+      "fodmap-high", "fodmap-moderate", "fodmap-low",
+      "meat", "pork", "alcohol", "gelatin",
+      "dairy", "gluten", "nut", "shellfish"
+    ],
+    "diet_types": [
+      {
+        "name": "Vegetarian",
+        "rules": [
+          {"tag": "meat", "rule": "AVOID"},
+          {"tag": "gelatin", "rule": "AVOID"}
+        ]
+      },
+      {
+        "name": "Halal",
+        "rules": [
+          {"tag": "pork", "rule": "AVOID"},
+          {"tag": "alcohol", "rule": "AVOID"},
+          {"tag": "gelatin", "rule": "AVOID"}
+        ]
+      }
+    ],
+    "protocols": [
+      {
+        "name": "Low-FODMAP",
+        "phases": [
+          {
+            "name": "elimination",
+            "rules": [{"tag": "fodmap-high", "rule": "AVOID"}]
+          },
+          {
+            "name": "reintroduction",
+            "rules": [{"tag": "fodmap-moderate", "rule": "LIMIT", "threshold": 15}]
+          }
+        ]
+      }
+    ]
+  }
+  

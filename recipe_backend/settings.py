@@ -187,13 +187,18 @@ REST_AUTH = {
     "TOKEN_MODEL": None,
     "REGISTER_SERIALIZER": "recipes.serializers.RegisterSerializer",
     "LOGIN_SERIALIZER": "recipes.serializers.LoginSerializer",
+    "SIGNUP_FIELDS": {
+        'username': {'required': False},
+        'email': {'required': True},
+        'password1': {'required': True},
+        'password2': {'required': True}
+    }
 }
 
 # Email verification disabled during development
 ACCOUNT_EMAIL_VERIFICATION = "none"
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_LOGIN_METHODS = ['email']
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_UNIQUE_EMAIL = True
 
 CACHES = {

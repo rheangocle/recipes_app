@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import (
     Recipe,
     Ingredient,
+    IngredientAlias,
     UserProfile,
     Inventory,
     Feedback,
@@ -16,6 +17,7 @@ from .models import (
     RecipeIngredient,
     Feedback,
 )
+from .models.policy import DietTypeRule, RestrictionRule, DietProtocol, DietProtocolRule, UserProtocol
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -50,21 +52,23 @@ class RecipeAdmin(admin.ModelAdmin):
         ("FODMAP Information", {"fields": ("fodmap_friendly", "fodmap_notes")}),
         ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse")}),
     )
-
+    
+class IngredientAliasInline(admin.TabularInline):
+    model = IngredientAlias
+    extra = 1
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ["name", "category", "fodmap_category", "default_unit"]
-    list_filter = ["category", "fodmap_category"]
-    search_fields = ["name"]
-    autocomplete_fields = ["category", "fodmap_category", "default_unit", "substitutes"]
-    filter_horizontal = ["substitutes"]
+    search_fields = ("name",)
+    list_filter = ("tags",)
+    filter_horizontal = ("tags",)
+    inlines = [IngredientAliasInline]
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ["name", "description"]
-    search_fields = ["name", "description"]
+    search_fields = ("name",)
+    list_display = ("name", "description")
 
 
 @admin.register(Category)
@@ -101,15 +105,38 @@ class FeedbackAdmin(admin.ModelAdmin):
     autocomplete_fields = ['user','recipe']
     readonly_fields = ['created_at']
     
+class DietTypeRuleInline(admin.TabularInline):
+    model = DietTypeRule
+    extra = 1
+    
 @admin.register(DietType)
 class DietTypeAdmin(admin.ModelAdmin):
-    list_display = ['name', 'description']
-    search_fields = ['name', 'description']
+    search_fields = ("name",)
+    inlines = [DietTypeRuleInline]
+
+class RestrictionRuleInline(admin.TabularInline):
+    model = RestrictionRule
+    extra = 1
     
 @admin.register(DietaryRestriction)
 class DietaryRestrictionAdmin(admin.ModelAdmin):
-    list_display = ['name', 'description']
-    search_fields = ['name', 'description']
+    search_fields = ("name",)
+    inlines = [RestrictionRuleInline]
+    
+class DietProtocolRuleInline(admin.TabularInline):
+    model = DietProtocolRule
+    extra = 1
+    
+@admin.register(DietProtocol)
+class DietProtocolAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+    inlines = [DietProtocolRuleInline]
+    
+@admin.register(UserProtocol)
+class UserProtocolAdmin(admin.ModelAdmin):
+    list_display = ("user", "protocol", "phase", "is_primary")
+    list_filter = ("is_primary", "phase", "protocol")
+    search_fields = ("user__username", "protocol__name")
 
 @admin.register(FoodPreference)
 class FoodPreferenceAdmin(admin.ModelAdmin):
@@ -124,7 +151,6 @@ class RecipePreferenceAdmin(admin.ModelAdmin):
     list_filter = ['preference']
     search_fields = ['user__username','recipe__title']
     autocomplete_fields = ['user','recipe']
-
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):

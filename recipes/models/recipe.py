@@ -3,6 +3,9 @@
 from django.db import models
 from .base import BaseModel
 from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.db.models import Q
+from django.db.models.functions import Lower
 User = get_user_model()
 
 class Category(BaseModel):
@@ -37,10 +40,22 @@ class Ingredient(BaseModel):
     fodmap_category = models.ForeignKey('FodmapCategory', on_delete=models.SET_NULL, null=True, blank=True)
     substitutes = models.ManyToManyField('self', blank=True, symmetrical=False, related_name='substitute_for')
     nutritional_info = models.JSONField(null=True, blank=True)
+    tags=models.ManyToManyField('Tag', blank=True, related_name='ingredients')
 
     def __str__(self):
         return str(self.name)
+
+class IngredientAlias(BaseModel):
+    name = models.CharField(max_length=255, unique=True)
+    ingredient = models.ForeignKey('Ingredient', on_delete=models.CASCADE, related_name='aliases')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(Lower('name'), name='uniq_ingredientalias_name_ci')
+        ]
     
+    def __str__(self):
+        return f"{self.name} -> {self.ingredient.name}"
 
 class Tag(BaseModel):
     name = models.CharField(max_length=255, unique=True)
@@ -97,4 +112,4 @@ class FodmapCategory(BaseModel):
     
     class Meta:
         verbose_name_plural = 'FODMAP Categories'
-        
+     

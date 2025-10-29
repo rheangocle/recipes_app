@@ -52,3 +52,12 @@ wrapt==1.17.0
 django-ratelimit==4.1.0
 django-redis==5.4.0
 redis==5.0.1
+python-decouple==3.8
+django-allauth==0.57.0
+django-cors-headers==4.3.1
+dj-rest-auth==5.0.2
+djangorestframework-simplejwt==5.3.1
+django-extensions==3.2.3
+django-filter==24.2
+django-sites==0.10
+cryptography==43.0.3

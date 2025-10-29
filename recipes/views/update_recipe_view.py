@@ -220,7 +220,7 @@ class UpdateFODMAPRecipeView(APIView):
                 f"Dietary Restrictions: {dietary_restrictions}.\n"
                 
                 # Add warning about allergic ingredients
-                f"{f'IMPORTANT: Completely avoid these allergens: {", ".join(allergic_ingredients)}.' if allergic_ingredients else ''}\n\n"
+                f"{'IMPORTANT: Completely avoid these allergens: ' + ', '.join(allergic_ingredients) + '.' if allergic_ingredients else ''}\n\n"
                 
                 f"Original Recipe:\n"
                 f"Title: {recipe.title}\n"

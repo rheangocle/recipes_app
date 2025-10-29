@@ -1,8 +1,17 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 from rest_framework import status
-        
+
+
+@override_settings(
+    CACHES={
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
+    },
+    SESSION_ENGINE='django.contrib.sessions.backends.db'
+)
 class AuthTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -19,9 +28,9 @@ class AuthTestCase(TestCase):
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.asssertEqual(User.objects.filter(email=self.test_email).exists())
+        self.assertTrue(User.objects.filter(email=self.test_email).exists())
         user = User.objects.get(email=self.test_email)
-        self.assertEqual(user.check_password(self.test_password))
+        self.assertTrue(user.check_password(self.test_password))
         
     def test_user_registration_duplicate_email(self):
         User.objects.create_user(
@@ -94,16 +103,22 @@ class AuthTestCase(TestCase):
         login_response = self.client.post(url, data, format='json')
         
         if login_response.status_code == status.HTTP_200_OK:
-            access_token = login_response.json().get('access_token')
+            login_data = login_response.json()
+            access_token = login_data.get('access')
             if access_token:
                 self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+            else:
+                self.fail(f"No access token found in response: {login_data}")
+        else:
+            self.fail(f"Login failed with status {login_response.status_code}: {login_response.content}")
                 
         details_url = '/user/details/'
         details_response = self.client.get(details_url)
         
         self.assertEqual(details_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(details_response['email'], self.test_email)
-        self.assertEqual(details_response['id'], user.id)
+        details_data = details_response.json()
+        self.assertEqual(details_data['email'], self.test_email)
+        self.assertEqual(details_data['id'], user.id)
             
     def test_get_user_details_unauthenticated(self):
         url = '/user/details/'

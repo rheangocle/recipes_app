@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config("SECRET_KEY")
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-dev-key-change-in-production")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
@@ -169,8 +169,8 @@ SITE_ID = 1
 SOCIAL_ACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
-            "client_id": config("GOOGLE_OAUTH_CLIENT_ID"),
-            "secret": config("GOOGLE_OAUTH_CLIENT_SECRET"),
+            "client_id": config("GOOGLE_OAUTH_CLIENT_ID", default="dummy-client-id"),
+            "secret": config("GOOGLE_OAUTH_CLIENT_SECRET", default="dummy-secret"),
             "key": "",
         },
         "SCOPE": ["profile", "email"],

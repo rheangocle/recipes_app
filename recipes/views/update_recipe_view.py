@@ -16,7 +16,7 @@ from ..models import (
 class UpdateFODMAPRecipeView(APIView):
     """View for updating FODMAP-friendly recipes"""
     api_url = "http://localhost:11434/api/generate"
-    model = "llama3.2:1b"
+    model = "deepseek-coder:1.3b"
 
     def extract_json_from_response(self, response_text):
         """Extract JSON from markdown response."""

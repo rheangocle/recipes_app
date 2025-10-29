@@ -2,6 +2,7 @@
 
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
 from .models import (
     Recipe,
     Ingredient,
@@ -32,7 +33,7 @@ class LoginSerializer(serializers.Serializer):
         if email and password:
             # Try to find user by email
             try:
-                user = User.objects.get(email=email)
+                user = User.objects.get(email__iexact=email)
                 if user.check_password(password):
                     attrs['user'] = user
                     return attrs
@@ -49,6 +50,13 @@ class LoginSerializer(serializers.Serializer):
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True)
+
+    def validate_email(self, value):
+        """Check if email is already in use"""
+        normalized_email = value.lower().strip()
+        if User.objects.filter(email__iexact=normalized_email).exists():
+            raise serializers.ValidationError('A user with this email already exists.')
+        return normalized_email
 
     def save(self, request=None):
         email = self.validated_data["email"]
@@ -70,6 +78,10 @@ class RegisterSerializer(serializers.Serializer):
             password=password,
         )
         return user
+    
+    def validate_password(self, value):
+        validate_password(value)
+        return value
 
 
 class FodmapCategorySerializer(serializers.ModelSerializer):
